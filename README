@@ -1,0 +1,5 @@
+Configure:
+- the host and port used in websocket/server.php
+- the host in www/app/main.js
+
+Start the server with: php websocket/server.php

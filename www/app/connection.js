@@ -1,5 +1,5 @@
 function Connection(params) {
-  var host = "ws://localhost:10001/websocket/server.php",
+  var host = params.host,
       socket = null,
       connected = false,
       pill = [];

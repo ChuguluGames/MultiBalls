@@ -1,0 +1,31 @@
+<html>
+<head>
+<title>WebSocket</title>
+  <link rel="stylesheet" href="assets/stylesheet/reset.css" type="text/css">
+  <link rel="stylesheet" href="app/main.css" type="text/css">
+</head>
+<body>
+  
+  <div id="console">Connecting to the server... please wait.</div>
+
+  <div id="game_choose">
+    <div class="title">Choose a game</div>
+    <ul class="games">
+      <li id="game-0">New game</li>
+    </ul>
+  </div>
+
+  <div id="game">
+    <div class="left">
+      <div class="game_name"></div>
+      <ul class="players"></ul>
+    </div>
+    <canvas class="canvas" width="500" height="500"></canvas>
+  </div>
+
+  <script src="assets/javascript/libs/jquery-1.7.min.js"></script>
+  <script src="assets/javascript/libs/client.js"></script>
+  <script src="app/connection.js"></script>
+  <script src="app/main.js"></script>
+</body>
+</html>

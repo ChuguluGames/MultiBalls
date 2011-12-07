@@ -63,7 +63,7 @@ class SuperWebSocket extends Websocket {
         foreach($this->users as $_user) {
           if($_user->id != $user->id) {
             $this->send($_user, json_encode(array(
-              "action"  => "new_user",
+              "action"  => "newUser",
               "user" => $user->infos()
             )));
           }
@@ -75,14 +75,14 @@ class SuperWebSocket extends Websocket {
 
         // tell the user about the game he has create
         $this->send($user, json_encode(array(
-          "action" => "connect_game",
+          "action" => "connectGame",
           "game" => $game->infos()      
         )));
 
         // tell the other about the new game
         foreach($this->users as $_user) {
           $this->send($_user, json_encode(array(
-            "action"  => "new_game",
+            "action"  => "newGame",
             "game" => $game->infos()
           )));
         }            
@@ -95,7 +95,7 @@ class SuperWebSocket extends Websocket {
 
           foreach($this->users as $_user) {
             $this->send($_user, json_encode(array(
-              "action"  => "new_game",
+              "action"  => "newGame",
               "user" => $user->infos(),
               "game" => $game->infos()
             )));
@@ -106,7 +106,7 @@ class SuperWebSocket extends Websocket {
           // tell the others players he joined
           foreach($game->players as $player) {
             $this->send($player, json_encode(array(
-              "action"  => "new_player",
+              "action"  => "newPlayer",
               "user" => $user->infos()
             )));          
           }     
@@ -117,9 +117,9 @@ class SuperWebSocket extends Websocket {
         $user->setGame($game);
 
         $this->send($user, json_encode(array(
-          "action"  => "connect_game",
+          "action"  => "connectGame",
           "user" => $user->infos(),
-          "game" => $game->infos()
+          "game" => $game->infos(true) // get the balls too
         )));                
 
       break;
@@ -135,7 +135,7 @@ class SuperWebSocket extends Websocket {
           foreach($user->game->players as $player) {
             if($user->id != $player->id) {
               $this->send($player, json_encode(array(
-                "action"  => "add_ball",
+                "action"  => "addBall",
                 "ball" => $message->ball
               )));
             }        
@@ -149,12 +149,19 @@ class SuperWebSocket extends Websocket {
           foreach($user->game->players as $player) {
             if($user->id != $player->id) {
               $this->send($player, json_encode(array(
-                "action"  => "remove_ball",
+                "action"  => "removeBall",
                 "id"    => $message->id
               )));
             }        
           }
         }           
+      break;
+
+      case "update_cache_balls":
+        // save the balls in the cache game balls
+        if($user->playing) {
+          $user->game->cache_balls = $message->balls;
+        }
       break;
     }
   }
@@ -164,7 +171,7 @@ class SuperWebSocket extends Websocket {
     foreach($player->game->players as $_player) {
       if($player->id != $_player->id) {
         $this->send($_player, json_encode(array(
-          "action"  => "disconnect_player",
+          "action"  => "disconnectPlayer",
           "user" => $player->infos(),
         )));
       }        
@@ -177,7 +184,7 @@ class SuperWebSocket extends Websocket {
     if($newMaster !== false) {
       // let's tell the player
       $this->send($newMaster, json_encode(array(
-        "action"  => "is_master_now"
+        "action"  => "changeToMaster"
       )));      
     }
   }
@@ -192,7 +199,7 @@ class SuperWebSocket extends Websocket {
     foreach($this->users as $_user) {
       if($_user->id != $user->id) {
         $this->send($_user, json_encode(array(
-          "action"  => "disconnect_user",
+          "action"  => "disconnectUser",
           "user" => $user->infos(),
         )));       
       }

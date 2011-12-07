@@ -6,6 +6,7 @@ class Game {
   public $players = array();
   public $name;
   public $haveMaster = false;
+  public $cache_balls = array();
 
   public function __construct($player, $id) {
     $this->haveMaster = true;
@@ -61,12 +62,16 @@ class Game {
     return $players;
   }
 
-  public function infos() {
-    return array(
+  public function infos($withBalls = false) {
+    $infos = array(
       "id" => $this->id,
       "name" => $this->name,
       "players" => $this->players()
     );
+    if($withBalls) {
+      $infos["balls"] = $this->cache_balls;
+    }
+    return $infos;
   }
 }
 

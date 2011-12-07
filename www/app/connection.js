@@ -24,8 +24,6 @@ function Connection(params) {
       }
 
     }
-      
-    connected = true;
   };
 
   /* when a message is received */

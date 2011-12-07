@@ -32,12 +32,25 @@ class WebSocket{
           else{ $this->connect($client); }
         }
         else{
-          $bytes = @socket_recv($socket,$buffer,2048,0);
-          if($bytes==0){ $this->disconnect($socket); }
+          $bufferLen = 1024;
+          $totalBytes = 0;
+          $response = "";
+
+          while(($bytes = @socket_recv($socket, $buffer, $bufferLen, 0)) >= $bufferLen) {
+            $response .= $buffer;
+            $totalBytes += $bytes;
+          }
+
+          $totalBytes += $bytes;
+
+          $response .= $buffer;
+          echo "bytes received: " . $totalBytes . "\n";
+
+          if($totalBytes==0){ $this->disconnect($socket); }
           else{
             $user = $this->getuserbysocket($socket);
-            if(!$user->handshake){ $this->dohandshake($user,$buffer); }
-            else{ $this->process($user,$this->unwrap($buffer)); }
+            if(!$user->handshake){ $this->dohandshake($user,$response); }
+            else{ $this->process($user,$this->unwrap($response)); }
           }
         }
       }

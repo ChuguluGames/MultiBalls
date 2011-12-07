@@ -1,222 +1,246 @@
-var socket = new Connection({
-  onOpen: function(message) {
+function Application() {
+  var socket,
+      canvas, container, userColor, timerBalls, isMaster;
+    
+  function init() {
+    setUserColor();
+    initSocket();
+    initHome();
+  }
+
+  function initSocket() {
+    socket = new Connection({
+      onOpen:     onSocketOpen,
+      onClose:    onSocketClose,
+      onMessage:  onSocketMessage
+    });
+  }
+
+  /* bind when the connection with the server happen */
+  function onSocketOpen(message) {
     say("Connected to the server");
 
     // tell the server about the new user
-    socket.send({action: "new_user", color: userColor});
-  },
-  onClose: function(message) {
+    socket.send({action: "new_user", color: userColor});    
+  }
+
+  /* bind when the connection with the server stop */ 
+  function onSocketClose(message) {
     say("Disconnected from the server");
-  },  
-  onMessage: function(message) {
-    switch(message.action) {
-      case "new_user":
-        say("New user connected: " + message.user.nickname);
-      break;
-
-      // get the id the server gave us
-      case "init":
-        $("#game_choose").show();
-
-        for(var i = 0; i < message.games.length; i++) {
-          addGame(message.games[i]);
-        }        
-
-        say("Welcome, <span style='color:" + message.user.color + ";'>" + message.user.nickname + "</span>. Please, choose a game.");
-      break;
-
-      case "connect_game":
-        $("#game_choose").hide();
-        $("#game").show();
-
-        $("#game .left .game_name").html(message.game.name);
-
-        $("#game .left .players").empty();
-
-        // add the players
-        for(var i = 0; i < message.game.players.length; i++) {
-          addPlayer(message.game.players[i]);
-        }       
-
-        say("Connected to the game: " + message.game.name + "");
-
-        initGame();
-
-        if(message.user.master) {
-          initMaster();
-        }
-      break;
-
-      case "new_game":
-        addGame(message.game);
-        say("New game created by " + message.user.nickname);
-      break;
-
-      case "new_player":
-        addPlayer(message.user);
-        say("New player: <span style='color:" + message.user.color + ";'>" + message.user.nickname + "</span>.");
-      break;
-
-      case "disconnect_player":
-        $("#player-" + message.user.id).remove();
-        say("Player <span style='color:" + message.user.color + ";'>" + message.user.nickname + "</span> disconnected.");
-      break;
-
-      case "disconnect_user":
-        say("User <span style='color:" + message.user.color + ";'>" + message.user.nickname + "</span> disconnected.");
-      break;
-
-      // new ball
-      case "add_ball":
-        container.add(message.ball);
-      break;
-
-      case "remove_ball":
-        container.remove(message.id);
-      break;
-
-      case "is_master_now":
-        initMaster();
-      break;
-    }
   }
-});
 
-function addPlayer(player) {
-  $("#game .left .players").append("<li id='player-" + player.id + "' style='color:" + player.color + ";'>" + player.nickname + "</li>");
-}
+  /* bind when the server send a message */
+  function onSocketMessage(message) {
+    var action = actions[message.action + "Action"];
+    if(action) action(message);
+  }
 
-function addGame(game) {
-  $("#game_choose .games").append("<li id='game-" + game.id + "'>" + game.name + "</li>")
-}
+  /* callback after a server message */
+  var actions = {
+    /* just after the user connected */
+    initAction: function(message) {
+      $("#game_choose .games li:not(#game-0)").remove(); // clear list
+      for(var i = 0; i < message.games.length; i++) {
+        addGame(message.games[i]);
+      }        
+      $("#game_choose").show();
+      say("Welcome, <span style='color:" + message.user.color + ";'>" + message.user.nickname + "</span>. Please, choose a game.");    
+    },
 
-$("#game_choose .games li").live("click", function() {
+    /* when a new user connects to the server */
+    newUserAction: function(message) {
+      say("New user connected: " + message.user.nickname);
+    },
 
-  var id = $(this).attr("id").split("-")[1];
-  socket.send({action: "connect_game", id: id});
-});
+    /* when a user is connected to a game */
+    connectGameAction: function(message) {
+      $("#game .left .game_name").html(message.game.name); // set the name of the game
+      $("#game .left .players").empty(); // clear the players list
 
-$("#game .left .game_name").live("click", function() {
-  stopGame();
+      $("#game_choose").hide();
+      $("#game").show();
 
-  socket.send({action: "exit_game"});
-  $("#game").hide();  
-  $("#game_choose").show();
-});
+      // add the players
+      for(var i = 0; i < message.game.players.length; i++) {
+        addPlayer(message.game.players[i]);
+      }       
 
-/* canvas object */
-var Container = function(canvas) {
-  canvas.width = $(canvas).width();
-  canvas.height = $(canvas).height();
-    
-  return {
-    balls: [],
-    id: 1,
-    updateFrequence: 1000/60,
+      say("Connected to the game: " + message.game.name + "");
 
-    update: function() {
-      var context = canvas.getContext("2d"),
-          i = this.balls.length,
-          _ball;
+      initGame(message.game.balls);
       
-      context.clearRect(0, 0, canvas.width, canvas.height);    
-
-      while(i--) {
-        _ball = this.balls[i];
-        context.fillStyle = _ball.color;
-        context.beginPath();
-        context.arc(_ball.x, _ball.y, _ball.radius, 0, Math.PI * 2, true); 
-        context.closePath();
-        context.fill();       
-      }
+      if(message.user.master) {
+        initMaster();
+      }    
+    },
+      
+    /* when the user create a new game */  
+    newGameAction: function(message) {
+      addGame(message.game); // add the game into the list
+      say("New game created by " + message.user.nickname);    
     },
 
-    startAutoUpdate: function() {
-      var self = this;
+    /* when a player enter the user game */
+    newPlayerAction: function(message) {
+      addPlayer(message.user); // add the player into the list
+      say("New player: <span style='color:" + message.user.color + ";'>" + message.user.nickname + "</span>.");    
     },
 
-    add: function(ball, setId) {
-      if(setId !== undefined && setId === true) {
-        ball.id = this.id;
-        this.id++;        
-      }
-      this.balls.push(ball);
-      this.update();
+    /* when a player exit the user game */
+    disconnectPlayerAction: function(message) {
+      $("#player-" + message.user.id).remove(); // remove the player from the liste
+      say("Player <span style='color:" + message.user.color + ";'>" + message.user.nickname + "</span> disconnected.");    
     },
 
-    isOn: function(e) {
-      var ball;
-      for(var i = 0; i < this.balls.length; i++) {
-        ball = this.balls[i];
-        if((e.offsetX >= ball.x - 10 && e.offsetX <= ball.x + 10) &&
-           (e.offsetY >= ball.y - 10 && e.offsetY <= ball.y + 10)) {
-          return ball.id;
-        }
-      }
-      return false;
+    /* when an user disconnect from the server */
+    disconnectUser: function(message) {
+      say("User <span style='color:" + message.user.color + ";'>" + message.user.nickname + "</span> disconnected.");    
     },
 
-    remove: function(id) {
-      var ball,
-          keep = [];
+    /* when a ball is added by the master */
+    addBallAction: function(message) {
+      container.add(message.ball);    
+    },
+      
+    /* when a ball is removed */  
+    removeBallAction: function(message) {
+      container.remove(message.id);
 
-      for(var i = 0; i < this.balls.length; i++) {
-        if(this.balls[i].id != id) keep.push(this.balls[i]);
-      }
+      // send the new set to the server
+      if(isMaster) {
+        sendBalls();
+      }    
+    },
 
-      this.balls = keep;
+    /* when the user become the master */
+    changeToMasterAction: function(message) {
+      initMaster();    
+    }  
+  };
 
-      this.update();
-    }
+  /* set a random color to the user */
+  function setUserColor() {
+    userColor = '#' + (Math.random() * 0xFFFFFF<<0).toString(16);
   }
-};
 
-/* ball object */
-var Ball = function(x, y, radius, color) {
-  return {
-    x: x,
-    y: y,
-    radius: radius,
-    color: color
+  /* initilize page home */ 
+  function initHome() {
+    initHomeEvents();
+  }
+
+  /* add home events */ 
+  function initHomeEvents() {
+    $("#game_choose .games li").live("click", onClickGameLink);
+
+  }
+
+  /* destroy home events */
+  function killHomeEvents() {
+    $("#game_choose .games li").die("click", onClickGameLink);
+  }
+
+  function onClickGameLink() {
+    killHomeEvents();
+
+    var id = $(this).attr("id").split("-")[1];
+    socket.send({action: "connect_game", id: id});    
+  }
+
+  /* initialize game */
+  function initGame(balls) {
+    canvas = $("#game .canvas")[0];
+    container = new Container(canvas);
+    
+    // add the balls to the container
+    if(balls.length > 0) {
+      container.balls = balls;
+      container.update();      
+    }
+
+    isMaster = false;     
+    
+    initGameEvents(); 
+  }
+
+  /* stop the game */
+  function stopGame() {
+    killGameEvents();
+
+    if(timerBalls) {
+      clearInterval(timerBalls);
+    }    
   }  
-};
 
+  function initGameEvents() {
+    $(canvas).bind("click", onClickGameCanvas);
+    $("#game .left .game_name").live("click", onClickGameName);
+  }
 
-function say(message) {
-  $("#console").html(message);
-}
+  function killGameEvents() {
+    $(canvas).unbind("click", onClickGameCanvas);
+    $("#game .left .game_name").die("click", onClickGameName);
+  }
 
-var canvas = $("#game .canvas")[0],
-    container = new Container(canvas),
-    userColor = '#' + (Math.random() * 0xFFFFFF<<0).toString(16),
-    timerBalls;
+  /* when the user come back to the home */
+  function onClickGameName() {
+    stopGame();
 
-function initGame() {
-  $(canvas).bind("click", function(e) {
+    socket.send({action: "exit_game"});
+    $("#game").hide();  
+    $("#game_choose").show();    
+
+    initHome();
+  }
+
+  /* when the user click on the gane canvas */ 
+  function onClickGameCanvas(e) {
     var id = container.isOn(e);
     if(id !== false) {
       container.remove(id);
       socket.send({action: "remove_ball", id: id});
-    }
-  });  
-}
+    }    
+  }
 
-function initMaster() {
-  timerBalls = setInterval(function() {
-    var ball = new Ball(
-                        Math.floor((canvas.width - 20) * Math.random()) + 20,
-                        Math.floor((canvas.height - 20) * Math.random()) + 20,
-                        Math.floor((20 - 10) * Math.random()) + 10,
-                        userColor
-                      );
-    container.add(ball, true);    
-    socket.send({action: "add_ball", ball: {id: ball.id, radius: ball.radius, color: ball.color, x: ball.x, y: ball.y}});
-  }, 1000);  
-}
+  function initMaster() {
+    isMaster = true;
+    timerBalls = setInterval(function() {
+      var ball = new Ball(
+                          Math.floor((canvas.width - 20) * Math.random()) + 20,
+                          Math.floor((canvas.height - 20) * Math.random()) + 20,
+                          Math.floor((20 - 10) * Math.random()) + 10,
+                          userColor
+                        );
+      container.add(ball, true);    
+      socket.send({action: "add_ball", ball: {id: ball.id, radius: ball.radius, color: ball.color, x: ball.x, y: ball.y}});
+      sendBalls();
+    }, 2000);  
+  }
 
-function stopGame() {
-  if(timerBalls) {
-    clearInterval(timerBalls);
+  /* send the balls to the server */
+  function sendBalls() {
+    socket.send({action: "update_cache_balls", balls: container.balls}); 
+  }
+
+  /* ad a player into the players list */
+  function addPlayer(player) {
+    $("#game .left .players").append("<li id='player-" + player.id + "' style='color:" + player.color + ";'>" + player.nickname + "</li>");
+  }
+
+  /* add a game into the game list */
+  function addGame(game) {
+    $("#game_choose .games").append("<li id='game-" + game.id + "'>" + game.name + "</li>")
+  }
+
+  /* change the console message */ 
+  function say(message) {
+    $("#console").html(message);
+  }
+
+  // public methods
+  return {
+    initialize: init
   }
 }
 
+var app = new Application();
+app.initialize();

@@ -2,6 +2,7 @@
 
 class SuperWebSocket extends Websocket {
   private $games = array();
+  private $usersId = 0;
 
   function send($user, $msg){ 
     $this->say("Sending to " . $user->id . ": ".$msg);
@@ -10,12 +11,13 @@ class SuperWebSocket extends Websocket {
   } 
 
   public function connect($socket){
-    $last_user = end($this->users);
-      
-    $user = new User($last_user->id + 1);
+    $this->usersId++;
+    $user = new User($this->usersId);
     $user->socket = $socket;
-    array_push($this->users,$user);
-    array_push($this->sockets,$socket);
+
+    $this->users[] = $user;
+    $this->sockets[] = $socket;
+
     $this->log($socket." CONNECTED!");
     $this->log(date("d/n/Y ")."at ".date("H:i:s T"));
   }
@@ -169,7 +171,15 @@ class SuperWebSocket extends Websocket {
     }
 
     // disconnect it from the game
-    $player->game->disconnect($player);    
+    $newMaster = $player->game->disconnect($player);    
+
+    // have a new creator
+    if($newMaster !== false) {
+      // let's tell the player
+      $this->send($newMaster, json_encode(array(
+        "action"  => "is_master_now"
+      )));      
+    }
   }
 
   private function disconnectUser($user) {

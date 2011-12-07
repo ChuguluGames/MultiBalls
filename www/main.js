@@ -75,9 +75,11 @@ var socket = new Connection({
         container.remove(message.id);
       break;
 
-      case "is_master_now":
+
+      case "is_master":
         initMaster();
       break;
+
     }
   }
 });
@@ -91,17 +93,15 @@ function addGame(game) {
 }
 
 $("#game_choose .games li").live("click", function() {
-
   var id = $(this).attr("id").split("-")[1];
   socket.send({action: "connect_game", id: id});
 });
 
 $("#game .left .game_name").live("click", function() {
-  stopGame();
-
   socket.send({action: "exit_game"});
   $("#game").hide();  
   $("#game_choose").show();
+  
 });
 
 /* canvas object */
@@ -181,15 +181,13 @@ var Ball = function(x, y, radius, color) {
   }  
 };
 
-
 function say(message) {
   $("#console").html(message);
 }
 
 var canvas = $("#game .canvas")[0],
     container = new Container(canvas),
-    userColor = '#' + (Math.random() * 0xFFFFFF<<0).toString(16),
-    timerBalls;
+    userColor = '#' + (Math.random() * 0xFFFFFF<<0).toString(16);
 
 function initGame() {
   $(canvas).bind("click", function(e) {
@@ -202,7 +200,8 @@ function initGame() {
 }
 
 function initMaster() {
-  timerBalls = setInterval(function() {
+  alert("ok")
+  setInterval(function() {
     var ball = new Ball(
                         Math.floor((canvas.width - 20) * Math.random()) + 20,
                         Math.floor((canvas.height - 20) * Math.random()) + 20,
@@ -211,12 +210,19 @@ function initMaster() {
                       );
     container.add(ball, true);    
     socket.send({action: "add_ball", ball: {id: ball.id, radius: ball.radius, color: ball.color, x: ball.x, y: ball.y}});
-  }, 1000);  
+  }, 1000);    
 }
 
-function stopGame() {
-  if(timerBalls) {
-    clearInterval(timerBalls);
-  }
-}
+/*
+en fait, un seul des joueurs doit ajouter des balls
+le jeu, on fait apparaitre des balls
+les joueurs doivent cliquer dessus pour les supprimer
+le premier a la supprimer gagne un point
+sachant quon delete la ball soit quand il clique dessus soit quand on a une mise a jour
+mais qui ajoute la ball alors ?
+ca devrait etre le serveur, non ?
+on envoi des balls il faut calculer la latence et l'envoyer qund le joueur arrive dans la partie
+on l'ajoute a notre latence
+le joueur 1 est le master, ca veut dire que seul lui ajoute des balls
+*/
 

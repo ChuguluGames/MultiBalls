@@ -8,7 +8,7 @@ class User{
   public $color;
   public $playing = false;
   public $game;
-  public $creator = false;
+  public $master = false;
 
   public function __construct($id) {
     $this->id = $id;
@@ -25,7 +25,7 @@ class User{
       "id" => $this->id,
       "nickname" => $this->nickname,
       "color" => $this->color,
-      "creator" => $this->creator
+      "master" => $this->master
     );
   }
 }

@@ -5,24 +5,27 @@ class Game {
   public $id;
   public $players = array();
   public $name;
+  public $haveMaster = false;
 
-  public function __construct($creator, $id) {
-    $creator->creator = true;
-    $this->players[] = $creator;
+  public function __construct($player, $id) {
+    $this->haveMaster = true;
+    $player->master = true;
+    $this->players[] = $player;
     $this->id = $id;
     $this->name = "Game" . $id;
   }
 
   public function addPlayer($player) {
+    
+    if(!$this->haveMaster) {
+      $player->master = true;
+      $this->haveMaster = true;
+    }
+
     $this->players[] = $player;
   }
 
   public function disconnect($player) {
-    // if creator, gotta find someone else
-    if($player->creator) {
-      $player->creator = false;
-    }
-
     $player->playing = false;
     $player->game = null;
 
@@ -31,6 +34,22 @@ class Game {
         array_splice($this->players, $key, 1);
       }
     }   
+
+    $newMaster = false;
+
+    // if creator, gotta find someone else
+    if($player->master) {
+      $player->master = false;
+      $this->haveMaster = false;
+      // the next one is the creator now
+      if(!empty($this->players)) {
+        $this->players[0]->master = true;
+        $newMaster = $this->players[0];
+        $this->haveMaster = true;
+      }
+    }   
+
+    return $newMaster;
   }
 
   public function players() {

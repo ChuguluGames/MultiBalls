@@ -3,3 +3,5 @@ Configure:
 - the host in www/app/main.js
 
 Start the server with: php websocket/server.php
+
+Currently only work on Safari.

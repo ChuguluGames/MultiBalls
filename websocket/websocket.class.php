@@ -70,28 +70,11 @@ class WebSocket{
   } 
 
   function dohandshake($user,$buffer){
-    $this->log("\nRequesting handshake...");
-    $this->log($buffer);
-    list($resource,$host,$origin,$key1,$key2,$l8b) = $this->getheaders($buffer);
-    $this->log("Handshaking...");
-    //$port = explode(":",$host);
-    //$port = $port[1];
-    //$this->log($origin."\r\n".$host);
-    $upgrade  = "HTTP/1.1 101 WebSocket Protocol Handshake\r\n" .
-                "Upgrade: WebSocket\r\n" .
-                "Connection: Upgrade\r\n" .
-                                //"WebSocket-Origin: " . $origin . "\r\n" .
-                                //"WebSocket-Location: ws://" . $host . $resource . "\r\n" .
-                "Sec-WebSocket-Origin: " . $origin . "\r\n" .
-                    "Sec-WebSocket-Location: ws://" . $host . $resource . "\r\n" .
-                    //"Sec-WebSocket-Protocol: icbmgame\r\n" . //Client doesn't send this
-                "\r\n" .
-                    $this->calcKey($key1,$key2,$l8b) . "\r\n";// .
-                        //"\r\n";
-    socket_write($user->socket,$upgrade.chr(0),strlen($upgrade.chr(0)));
-    $user->handshake=true;
-    $this->log($upgrade);
-    $this->log("Done handshaking...");
+
+    $handshake = WebSocketHandshake($buffer);
+    $user->handshake = true;
+    socket_write($user->socket, $handshake, strlen($handshake));
+
     return true;
   }
   

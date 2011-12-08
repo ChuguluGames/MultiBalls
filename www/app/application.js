@@ -3,9 +3,13 @@ function Application(params) {
       canvas, container, userColor, timerBalls, isMaster;
     
   function init() {
-    setUserColor();
-    initSocket();
-    initHome();
+    if ("WebSocket" in window) {
+      setUserColor();
+      initSocket();
+      initHome();
+    } else {
+      alert("You're browser doesn't support WebSocket");
+    }
   }
 
   function initSocket() {
